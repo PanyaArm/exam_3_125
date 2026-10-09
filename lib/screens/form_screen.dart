@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // เพิ่มแพ็กเกจสำหรับคุม Input Formatter
+import 'package:flutter/services.dart';
 import 'package:form_field_validator/form_field_validator.dart';
 import 'package:exam_3_125/models/patient_model.dart';
 
@@ -14,11 +14,12 @@ class FormScreen extends StatefulWidget {
 class _FormScreenState extends State<FormScreen> {
   final formKey = GlobalKey<FormState>();
   Patient myPatient = Patient(
-      referralId: '',
-      patientName: '',
-      doctorEmail: '',
-      triageScore: '',
-      spo2: '');
+    referralId: '',
+    patientName: '',
+    doctorEmail: '',
+    triageScore: '',
+    spo2: '',
+  );
 
   final CollectionReference _patientCollection =
       FirebaseFirestore.instance.collection("referrals");
@@ -26,108 +27,106 @@ class _FormScreenState extends State<FormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        padding: const EdgeInsets.all(20),
+      body: Padding(
+        padding: const EdgeInsets.all(20.0),
         child: Form(
           key: formKey,
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("รหัสส่งต่อผู้ป่วย (Referral ID)",
-                    style: TextStyle(fontSize: 18)),
+                const Text("รหัสส่งต่อ (Referral ID)"),
                 TextFormField(
-                  validator: RequiredValidator(errorText: "กรุณาป้อนรหัสส่งต่อ"),
-                  onSaved: (val) => myPatient.referralId = val!,
+                  validator: RequiredValidator(errorText: "กรุณากรอกรหัสส่งต่อ"),
+                  onSaved: (String? referralId) {
+                    myPatient.referralId = referralId ?? '';
+                  },
                 ),
                 const SizedBox(height: 15),
-                const Text("ชื่อ-นามสกุล / รหัส HN",
-                    style: TextStyle(fontSize: 18)),
+                const Text("ชื่อผู้ป่วย (Patient Name)"),
                 TextFormField(
-                  validator: RequiredValidator(
-                      errorText: "กรุณาป้อนชื่อหรือรหัสผู้ป่วย"),
-                  onSaved: (val) => myPatient.patientName = val!,
+                  validator: RequiredValidator(errorText: "กรุณากรอกชื่อผู้ป่วย"),
+                  onSaved: (String? patientName) {
+                    myPatient.patientName = patientName ?? '';
+                  },
                 ),
                 const SizedBox(height: 15),
-                const Text("อีเมลแพทย์ผู้ส่งตัว", style: TextStyle(fontSize: 18)),
+                const Text("อีเมลแพทย์ผู้ส่ง (Doctor Email)"),
                 TextFormField(
-                  keyboardType: TextInputType.emailAddress,
                   validator: MultiValidator([
-                    RequiredValidator(errorText: "กรุณาป้อนอีเมล"),
-                    EmailValidator(errorText: "รูปแบบอีเมลไม่ถูกต้อง")
+                    RequiredValidator(errorText: "กรุณากรอกอีเมลแพทย์"),
+                    EmailValidator(errorText: "รูปแบบอีเมลไม่ถูกต้อง"),
                   ]),
-                  onSaved: (val) => myPatient.doctorEmail = val!,
+                  keyboardType: TextInputType.emailAddress,
+                  onSaved: (String? doctorEmail) {
+                    myPatient.doctorEmail = doctorEmail ?? '';
+                  },
                 ),
                 const SizedBox(height: 15),
-                
-                // --- แก้ไขช่อง Triage Score ---
-                const Text("ระดับความเร่งด่วน (Triage Score 1-5)",
-                    style: TextStyle(fontSize: 18)),
+                const Text("ระดับความเร่งด่วน Triage Score (1-5)"),
                 TextFormField(
                   keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly], // บล็อกตัวอักษร บังคับพิมพ์ได้เฉพาะตัวเลข
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return "กรุณาป้อนระดับความเร่งด่วน";
+                      return "กรุณากรอก Triage Score";
                     }
-                    final score = int.tryParse(value);
+                    int? score = int.tryParse(value);
                     if (score == null || score < 1 || score > 5) {
-                      return "กรุณากรอกตัวเลขช่วง 1-5 เท่านั้น";
+                      return "กรุณากรอกค่าระหว่าง 1 ถึง 5 เท่านั้น";
                     }
                     return null;
                   },
-                  onSaved: (val) => myPatient.triageScore = val!,
+                  onSaved: (String? triageScore) {
+                    myPatient.triageScore = triageScore ?? '';
+                  },
                 ),
                 const SizedBox(height: 15),
-                
-                // --- แก้ไขช่อง SpO2 ---
-                const Text("ค่า SpO2 (%)", style: TextStyle(fontSize: 18)),
+                const Text("ค่า SpO2 (0-100)"),
                 TextFormField(
                   keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly], // บล็อกตัวอักษร บังคับพิมพ์ได้เฉพาะตัวเลข
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return "กรุณาป้อนค่าออกซิเจน";
+                      return "กรุณากรอกค่า SpO2";
                     }
-                    final spo2 = int.tryParse(value);
-                    if (spo2 == null || spo2 < 0 || spo2 > 100) {
-                      return "กรุณากรอกค่าออกซิเจนช่วง 0-100 เท่านั้น";
+                    int? spo2Val = int.tryParse(value);
+                    if (spo2Val == null || spo2Val < 0 || spo2Val > 100) {
+                      return "กรุณากรอกค่าระหว่าง 0 ถึง 100 เท่านั้น";
                     }
                     return null;
                   },
-                  onSaved: (val) => myPatient.spo2 = val!,
+                  onSaved: (String? spo2) {
+                    myPatient.spo2 = spo2 ?? '';
+                  },
                 ),
-                const SizedBox(height: 25),
+                const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    style:
-                        ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-                    child: const Text("บันทึกข้อมูลคัดกรอง",
-                        style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white)),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red[300]),
+                    child: const Text("บันทึกข้อมูล", style: TextStyle(fontSize: 18, color: Colors.white)),
                     onPressed: () async {
                       if (formKey.currentState!.validate()) {
-                        formKey.currentState?.save();
+                        formKey.currentState!.save();
                         await _patientCollection.add({
                           "referralId": myPatient.referralId,
                           "patientName": myPatient.patientName,
                           "doctorEmail": myPatient.doctorEmail,
                           "triageScore": myPatient.triageScore,
-                          "spo2": myPatient.spo2
+                          "spo2": myPatient.spo2,
                         });
-                        formKey.currentState?.reset();
+                        formKey.currentState!.reset();
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("บันทึกข้อมูลสำเร็จ")));
+                            const SnackBar(content: Text('บันทึกข้อมูลเรียบร้อยแล้ว')),
+                          );
                         }
                       }
                     },
                   ),
-                )
+                ),
               ],
             ),
           ),

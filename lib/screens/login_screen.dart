@@ -1,8 +1,5 @@
-// ignore_for_file: unused_import
-
-import 'package:exam_3_125/screens/home_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:exam_3_125/models/patient_model.dart';
+import 'package:exam_3_125/screens/home_screen.dart'; 
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,49 +9,88 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // บัญชีจำลอง
-  final String adminEmail = "admin@test.com";
-  final String operatorEmail = "operator@test.com";
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController(); 
+  final _formKey = GlobalKey<FormState>();
 
-  void _login(String role) {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => HomeScreen(userRole: role)),
-    );
+  void _login() {
+    if (_formKey.currentState!.validate()) {
+      String email = _emailController.text.trim();
+      String role = '';
+
+      // ตรวจสอบบัญชีตามข้อกำหนด
+      if (email == 'admin@test.com') {
+        role = 'ADMIN';
+      } else if (email == 'operator@test.com') {
+        role = 'OPERATOR';
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('ไม่พบบัญชีผู้ใช้นี้ในระบบ')),
+        );
+        return; 
+      }
+
+      // ส่งสิทธิ์ (role) ไปหน้า HomeScreen (แก้ไขชื่อตัวแปรให้ถูกต้องแล้ว)
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => HomeScreen(role: role),
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("เข้าสู่ระบบ TeleTriage"),
-        backgroundColor: Colors.red.shade200,
+        title: const Text('เข้าสู่ระบบ TeleTriage', style: TextStyle(color: Colors.black87)),
+        backgroundColor: Colors.red[200],
         centerTitle: true,
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.monitor_heart, size: 100, color: Colors.red),
-            const SizedBox(height: 30),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.admin_panel_settings),
-              label: const Text("Login as Admin (ทำได้ทุกอย่าง)"),
-              style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(300, 50),
-                  backgroundColor: Colors.red.shade100),
-              onPressed: () => _login("admin"),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.person),
-              label: const Text("Login as Operator (เพิ่ม/ดู เท่านั้น)"),
-              style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(300, 50),
-                  backgroundColor: Colors.blue.shade100),
-              onPressed: () => _login("operator"),
-            ),
-          ],
+      body: Padding(
+        padding: const EdgeInsets.all(30.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.monitor_heart, color: Colors.red, size: 80),
+              const SizedBox(height: 40),
+              TextFormField(
+                controller: _emailController,
+                decoration: const InputDecoration(
+                  labelText: 'อีเมล (Email)',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.email),
+                ),
+                validator: (value) => value!.isEmpty ? 'กรุณากรอกอีเมล' : null,
+              ),
+              const SizedBox(height: 15),
+              TextFormField(
+                controller: _passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'รหัสผ่าน (Password)',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.lock),
+                ),
+                validator: (value) => value!.isEmpty ? 'กรุณากรอกรหัสผ่าน' : null,
+              ),
+              const SizedBox(height: 30),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                  onPressed: _login,
+                  child: const Text('เข้าสู่ระบบ', style: TextStyle(fontSize: 18, color: Colors.white)),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text("บัญชีทดสอบ: \nadmin@test.com | operator@test.com", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
+            ],
+          ),
         ),
       ),
     );

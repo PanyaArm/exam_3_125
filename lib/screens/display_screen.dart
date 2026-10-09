@@ -2,40 +2,80 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class DisplayScreen extends StatefulWidget {
-  final String userRole; // รับ Role เพื่อเอามาเช็คสิทธิ์
-  const DisplayScreen({super.key, required this.userRole});
+  final String role; // ตัวรับสิทธิ์การใช้งานจาก HomeScreen
+  
+  const DisplayScreen({super.key, required this.role});
 
   @override
   State<DisplayScreen> createState() => _DisplayScreenState();
 }
 
 class _DisplayScreenState extends State<DisplayScreen> {
-  final _firestore = FirebaseFirestore.instance;
+  final CollectionReference _patientCollection =
+      FirebaseFirestore.instance.collection("referrals");
 
-  // ฟังก์ชันลบข้อมูล
-  Future<void> deletePatient(String documentId) async {
-    await _firestore.collection('referrals').doc(documentId).delete();
-  }
+  // ฟังก์ชันแก้ไขข้อมูลผู้ป่วย
+  Future<void> _editPatient(String docId, Map<String, dynamic> data) async {
+    TextEditingController nameController =
+        TextEditingController(text: data["patientName"] ?? '');
+    TextEditingController emailController =
+        TextEditingController(text: data["doctorEmail"] ?? '');
+    TextEditingController scoreController =
+        TextEditingController(text: data["triageScore"]?.toString() ?? '');
+    TextEditingController spo2Controller =
+        TextEditingController(text: data["spo2"]?.toString() ?? '');
 
-  // แจ้งเตือนยืนยันการลบ
-  Future<void> showDeleteConfirmation(String documentId) async {
-    return await showDialog(
+    return showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('ยืนยันการลบข้อมูล'),
-          content: const Text('ต้องการปิดเคสส่งต่อ / ย้ายผู้ป่วย ใช่หรือไม่?'),
+          title: const Text("แก้ไขข้อมูลผู้ป่วย"),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: "ชื่อผู้ป่วย"),
+                ),
+                TextField(
+                  controller: emailController,
+                  decoration: const InputDecoration(labelText: "อีเมลแพทย์"),
+                ),
+                TextField(
+                  controller: scoreController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: "Triage Score (1-5)"),
+                ),
+                TextField(
+                  controller: spo2Controller,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: "ค่า SpO2 (0-100)"),
+                ),
+              ],
+            ),
+          ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('ยกเลิก'),
+              child: const Text("ยกเลิก", style: TextStyle(color: Colors.grey)),
+              onPressed: () => Navigator.of(context).pop(),
             ),
             TextButton(
+              child: const Text("บันทึก", style: TextStyle(color: Colors.blue)),
               onPressed: () async {
-                await deletePatient(documentId);
-                Navigator.pop(context);
+                await _patientCollection.doc(docId).update({
+                  "patientName": nameController.text.trim(),
+                  "doctorEmail": emailController.text.trim(),
+                  "triageScore": scoreController.text.trim(),
+                  "spo2": spo2Controller.text.trim(),
+                });
+                if (mounted) {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('แก้ไขข้อมูลเรียบร้อยแล้ว')),
+                  );
+                }
               },
-              child: const Text('ลบข้อมูล', style: TextStyle(color: Colors.red)),
             ),
           ],
         );
@@ -43,46 +83,30 @@ class _DisplayScreenState extends State<DisplayScreen> {
     );
   }
 
-  // ฟังก์ชันอัปเดตข้อมูล Triage และ SpO2
-  Future<void> showEditDialog(
-      String documentId, String currentScore, String currentSpO2) async {
-    TextEditingController scoreController = TextEditingController(text: currentScore);
-    TextEditingController spo2Controller = TextEditingController(text: currentSpO2);
-
-    return await showDialog(
+  // ฟังก์ชันลบข้อมูลผู้ป่วย
+  Future<void> _deletePatient(String documentId) async {
+    return showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('อัปเดตสัญญาณชีพ'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: scoreController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Triage Score (1-5)'),
-              ),
-              TextField(
-                controller: spo2Controller,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'SpO2 (%)'),
-              ),
-            ],
-          ),
+          title: const Text("ยืนยันการลบข้อมูล"),
+          content: const Text("คุณต้องการลบข้อมูลผู้ป่วยรายนี้ใช่หรือไม่?"),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('ยกเลิก'),
+              child: const Text("ยกเลิก", style: TextStyle(color: Colors.grey)),
+              onPressed: () => Navigator.of(context).pop(),
             ),
             TextButton(
+              child: const Text("ลบข้อมูล", style: TextStyle(color: Colors.red)),
               onPressed: () async {
-                await _firestore.collection('referrals').doc(documentId).update({
-                  'triageScore': scoreController.text,
-                  'spo2': spo2Controller.text,
-                });
-                Navigator.pop(context);
+                await _patientCollection.doc(documentId).delete();
+                if (mounted) {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('ลบข้อมูลสำเร็จ')),
+                  );
+                }
               },
-              child: const Text('บันทึกการแก้ไข'),
             ),
           ],
         );
@@ -92,62 +116,70 @@ class _DisplayScreenState extends State<DisplayScreen> {
 
   @override
   Widget build(BuildContext context) {
-    bool isAdmin = widget.userRole == 'admin'; // เช็คว่าเป็น Admin หรือไม่
-
     return Scaffold(
       body: StreamBuilder<QuerySnapshot>(
-        stream: _firestore.collection("referrals").snapshots(),
+        stream: _patientCollection.snapshots(),
         builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-          if (!snapshot.hasData) {
+          if (snapshot.hasError) {
+            return const Center(child: Text("เกิดข้อผิดพลาดในการดึงข้อมูล"));
+          }
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text("ยังไม่มีข้อมูลผู้ป่วย"));
+          }
+
           return ListView.builder(
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
-              final document = snapshot.data!.docs[index];
+              var document = snapshot.data!.docs[index];
+              Map<String, dynamic> data =
+                  document.data() as Map<String, dynamic>;
+              String docId = document.id;
+
+              // กำหนดสี Triage Score 1-5
+              Color scoreColor = Colors.grey;
+              String scoreStr = data["triageScore"].toString();
+              if (scoreStr == "1") scoreColor = Colors.red;
+              else if (scoreStr == "2") scoreColor = Colors.orange;
+              else if (scoreStr == "3") scoreColor = Colors.yellow;
+              else if (scoreStr == "4") scoreColor = Colors.green;
+              else if (scoreStr == "5") scoreColor = Colors.blue;
+
               return Card(
-                elevation: 3,
                 margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                elevation: 2,
                 child: ListTile(
                   leading: CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Colors.red.shade100,
-                    child: FittedBox(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text("Triage", style: TextStyle(fontSize: 10)),
-                          Text(document["triageScore"],
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 18)),
-                        ],
-                      ),
+                    backgroundColor: scoreColor,
+                    child: Text(
+                      scoreStr,
+                      style: const TextStyle(
+                          color: Colors.black, fontWeight: FontWeight.bold),
                     ),
                   ),
-                  title: Text("${document["patientName"]} (SpO2: ${document["spo2"]}%)",
+                  title: Text("${data["patientName"]} (${data["referralId"]})", 
                       style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text("หมอ: ${document["doctorEmail"]}"),
+                  subtitle: Text(
+                      "SpO2: ${data["spo2"]}% | Email: ${data["doctorEmail"]}"),
                   
-                  // แสดงปุ่ม แก้ไข และ ลบ เฉพาะสิทธิ์ Admin (ถ้าไม่ใช่ ซ่อนปุ่ม)
-                  trailing: isAdmin
+                  // เงื่อนไขซ่อน/แสดงปุ่ม (RBAC)
+                  trailing: widget.role == 'ADMIN'
                       ? Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
                               icon: const Icon(Icons.edit, color: Colors.orange),
-                              onPressed: () => showEditDialog(
-                                  document.id,
-                                  document["triageScore"],
-                                  document["spo2"]),
+                              onPressed: () => _editPatient(docId, data), // เรียกใช้งานฟังก์ชันแก้ไข
                             ),
                             IconButton(
                               icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () =>
-                                  showDeleteConfirmation(document.id),
+                              onPressed: () => _deletePatient(docId),
                             ),
                           ],
                         )
-                      : null, // ถ้าเป็น Operator ไม่แสดงอะไรเลยที่ด้านขวา
+                      : null, // ถ้าเป็น OPERATOR ให้ซ่อนปุ่ม
                 ),
               );
             },
